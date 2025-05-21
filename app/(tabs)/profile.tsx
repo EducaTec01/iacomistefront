@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  SafeAreaView, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  SafeAreaView,
+  ScrollView,
   Platform,
   Switch,
   TouchableOpacity,
   Alert
 } from 'react-native';
 import { useAppContext } from '../../context/AppContext';
+import { router } from 'expo-router';
 import Colors from '../../constants/Colors';
 import RecipeList from '../../components/RecipeList';
 import { ChevronRight, Heart, Settings, User as UserIcon, Bell } from 'lucide-react-native';
@@ -18,20 +19,22 @@ import PreferenceSelector from '../../components/PreferenceSelector';
 import CustomRestrictionInput from '../../components/CustomRestrictionInput';
 import { TDietaryPreference, TAllergy } from '../../types';
 import Button from '../../components/Button';
+import { logout } from '../../services/serviceslogin';
+import { allrecipe } from '../../services/serviceslogin';
 
 export default function ProfileScreen() {
-  const { 
-    user, 
-    recipes, 
+  const {
+    user,
+    recipes,
     isRecipeFavorite,
     setUserPreferences,
     setUserAllergies,
     setCustomRestrictions
   } = useAppContext();
-  
+
   const [isEditMode, setIsEditMode] = useState(false);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  
+
   const [dietaryPreferences, setDietaryPreferences] = useState<TDietaryPreference[]>([
     { id: '1', name: 'Vegetarian', selected: user?.preferences.includes('vegetarian') || false },
     { id: '2', name: 'Vegan', selected: user?.preferences.includes('vegan') || false },
@@ -40,7 +43,7 @@ export default function ProfileScreen() {
     { id: '5', name: 'Keto', selected: user?.preferences.includes('keto') || false },
     { id: '6', name: 'Low-Carb', selected: user?.preferences.includes('low-carb') || false },
   ]);
-  
+
   const [allergies, setAllergies] = useState<TAllergy[]>([
     { id: '1', name: 'Peanuts', selected: user?.allergies.includes('peanuts') || false },
     { id: '2', name: 'Tree Nuts', selected: user?.allergies.includes('tree nuts') || false },
@@ -49,56 +52,77 @@ export default function ProfileScreen() {
     { id: '5', name: 'Wheat', selected: user?.allergies.includes('wheat') || false },
     { id: '6', name: 'Soy', selected: user?.allergies.includes('soy') || false },
   ]);
-  
+
+  const handleLogout = async () => {
+
+    try {
+      await logout();
+      router.replace('/(auth)/login');
+
+    } catch (err) {
+      alert(err);
+    }
+  };
+
+  const handlePrueba = async () => {
+
+    try {
+      const prueba = await allrecipe();
+      console.log("esto llego a la vista de profile: ", prueba.body.recipes);
+    } catch (err) {
+      alert(err);
+    }
+  };
+
   const [customRestrictions, setCustomRestrictionsList] = useState<string[]>(
     user?.customRestrictions || []
   );
-  
+
   const favoriteRecipes = recipes.filter(recipe => isRecipeFavorite(recipe.id));
-  
+
   const handleToggleDietaryPreference = (id: string) => {
-    const updatedPreferences = dietaryPreferences.map(pref => 
+    const updatedPreferences = dietaryPreferences.map(pref =>
       pref.id === id ? { ...pref, selected: !pref.selected } : pref
     );
     setDietaryPreferences(updatedPreferences);
   };
-  
+
   const handleToggleAllergy = (id: string) => {
-    const updatedAllergies = allergies.map(allergy => 
+    const updatedAllergies = allergies.map(allergy =>
       allergy.id === id ? { ...allergy, selected: !allergy.selected } : allergy
     );
     setAllergies(updatedAllergies);
   };
-  
+
   const handleAddRestriction = (restriction: string) => {
     setCustomRestrictionsList([...customRestrictions, restriction]);
   };
-  
+
   const handleRemoveRestriction = (index: number) => {
     const updatedRestrictions = [...customRestrictions];
     updatedRestrictions.splice(index, 1);
     setCustomRestrictionsList(updatedRestrictions);
   };
-  
+
   const saveChanges = () => {
     // Save preferences
     const selectedPreferences = dietaryPreferences
       .filter(pref => pref.selected)
       .map(pref => pref.name.toLowerCase());
-    
+
     // Save allergies
     const selectedAllergies = allergies
       .filter(allergy => allergy.selected)
       .map(allergy => allergy.name.toLowerCase());
-    
+
     setUserPreferences(selectedPreferences);
     setUserAllergies(selectedAllergies);
     setCustomRestrictions(customRestrictions);
-    
+
     setIsEditMode(false);
     Alert.alert('Success', 'Your preferences have been updated.');
   };
-  
+
   const renderProfileHeader = () => (
     <View style={styles.profileHeader}>
       <View style={styles.profileInfo}>
@@ -114,23 +138,24 @@ export default function ProfileScreen() {
           </Text>
         </View>
       </View>
-      
+
       <Button
         title={isEditMode ? "Cancel" : "Edit Preferences"}
         onPress={() => setIsEditMode(!isEditMode)}
         variant={isEditMode ? "outline" : "primary"}
         size="small"
       />
+
     </View>
   );
-  
-  const renderSettingsItem = ({ 
-    icon, 
-    title, 
-    value, 
+
+  const renderSettingsItem = ({
+    icon,
+    title,
+    value,
     hasToggle = false,
     toggleValue,
-    onToggleChange, 
+    onToggleChange,
     onPress
   }: {
     icon: React.ReactNode;
@@ -165,16 +190,16 @@ export default function ProfileScreen() {
       )}
     </TouchableOpacity>
   );
-  
+
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView style={styles.container}>
         <View style={styles.header}>
           <Text style={styles.title}>Profile</Text>
         </View>
-        
+
         {renderProfileHeader()}
-        
+
         {isEditMode ? (
           <View style={styles.preferencesContainer}>
             <PreferenceSelector
@@ -183,20 +208,20 @@ export default function ProfileScreen() {
               onSelect={handleToggleDietaryPreference}
               multiSelect={true}
             />
-            
+
             <PreferenceSelector
               title="Allergies & Intolerances"
               options={allergies}
               onSelect={handleToggleAllergy}
               multiSelect={true}
             />
-            
+
             <CustomRestrictionInput
               restrictions={customRestrictions}
               onAdd={handleAddRestriction}
               onRemove={handleRemoveRestriction}
             />
-            
+
             <View style={styles.saveButtonContainer}>
               <Button
                 title="Save Changes"
@@ -211,7 +236,7 @@ export default function ProfileScreen() {
           <>
             <View style={styles.settingsSection}>
               <Text style={styles.sectionTitle}>Settings</Text>
-              
+
               {renderSettingsItem({
                 icon: <Bell size={20} color={Colors.primary.default} />,
                 title: 'Notifications',
@@ -219,22 +244,36 @@ export default function ProfileScreen() {
                 toggleValue: notificationsEnabled,
                 onToggleChange: setNotificationsEnabled
               })}
-              
+
               {renderSettingsItem({
                 icon: <Settings size={20} color={Colors.primary.default} />,
                 title: 'Account Settings',
                 onPress: () => Alert.alert('Account Settings', 'This would open account settings.')
               })}
             </View>
-            
+
             <RecipeList
               title="Favorite Recipes"
               recipes={favoriteRecipes}
               emptyMessage="You haven't saved any favorites yet."
             />
+
+            <Button
+              title={"Logout"}
+              onPress={handleLogout}
+              variant={"primary"}
+              size="small"
+            />
+
+            <Button
+              title={"Prueba"}
+              onPress={handlePrueba}
+              variant={"primary"}
+              size="small"
+            />
           </>
         )}
-        
+
         <View style={styles.spacer} />
       </ScrollView>
     </SafeAreaView>

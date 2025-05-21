@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   View, 
   Text, 
@@ -15,6 +15,9 @@ import { useAuth } from '@/context/AuthContext';
 import Colors from '@/constants/Colors';
 import Button from '@/components/Button';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react-native';
+import { login } from '@/services/serviceslogin';
+import { logout } from '@/services/serviceslogin';
+import { check } from '@/services/serviceslogin';
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
@@ -22,6 +25,13 @@ export default function LoginScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const { signIn, isLoading } = useAuth();
+  const [ejemp, setEjem] = useState([]);
+
+  useEffect(() => {
+    //logout();
+    check();
+    
+  }, []);
 
   const handleLogin = async () => {
     if (!email || !password) {
@@ -30,10 +40,14 @@ export default function LoginScreen() {
     }
 
     try {
-      await signIn(email, password);
-      router.replace('/(tabs)');
+       const loginResponse = await login(email, password);
+       if (loginResponse.status === 200) {
+        router.replace('/(tabs)');
+       } else {
+        setError('Usuario o contraseña incorrectos');
+       }
     } catch (err) {
-      setError('Invalid email or password');
+      setError('Usuario o contraseña incorrectos');
     }
   };
 
