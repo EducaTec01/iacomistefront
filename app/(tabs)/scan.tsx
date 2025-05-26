@@ -1,11 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
-  TouchableOpacity, 
-  Image, 
-  ScrollView, 
+import {
+  View,
+  Text,
+  StyleSheet,
+  TouchableOpacity,
+  Image,
+  ScrollView,
   ActivityIndicator,
   Platform,
   SafeAreaView
@@ -18,6 +18,8 @@ import Colors from '../../constants/Colors';
 import Button from '../../components/Button';
 import { useAppContext } from '../../context/AppContext';
 import { Ingredient } from '../../types';
+import { uploadImage } from '../../services/scannings'; // ajusta la ruta si es diferente
+
 
 export default function ScanScreen() {
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
@@ -83,23 +85,27 @@ export default function ScanScreen() {
     }
   };
 
-  const handleScanImage = (imageUri: string) => {
-    setIsScanning(true);
-    
-    // Simulate API call to analyze image and identify ingredients
-    setTimeout(() => {
-      const mockIngredients: Ingredient[] = [
-        { id: '1', name: 'tomato', confidence: 0.95 },
-        { id: '2', name: 'onion', confidence: 0.92 },
-        { id: '3', name: 'bell pepper', confidence: 0.89 },
-        { id: '4', name: 'garlic', confidence: 0.85 },
-        { id: '5', name: 'olive oil', confidence: 0.78 },
-      ];
-      
-      setScannedIngredients(mockIngredients);
+
+  const handleScanImage = async (imageUri: string) => {
+    try {
+      setIsScanning(true); // muestra el spinner
+
+      const result = await uploadImage(imageUri);
+
+      // Suponiendo que los ingredientes vienen como string separados por comas
+      const ingredientsArray = result.ingredients.split(',').map((name: string, index: number) => ({
+        id: index.toString(),
+        name: name.trim(),
+      }));
+
+      setScannedIngredients(ingredientsArray);
+    } catch (error) {
+      console.error('Error al escanear imagen:', error);
+    } finally {
       setIsScanning(false);
-    }, 2000);
+    }
   };
+
 
   const handleRemoveIngredient = (id: string) => {
     setScannedIngredients(prev => prev.filter(ingredient => ingredient.id !== id));
@@ -125,13 +131,13 @@ export default function ScanScreen() {
           onMountError={(error) => console.error('Camera error:', error)}
         >
           <View style={styles.cameraControlsContainer}>
-            <TouchableOpacity 
-              style={styles.closeButton} 
+            <TouchableOpacity
+              style={styles.closeButton}
               onPress={handleCloseCamera}
             >
               <X size={24} color={Colors.neutral.white} />
             </TouchableOpacity>
-            
+
             <View style={styles.cameraButtonsRow}>
               <TouchableOpacity
                 style={styles.flipCameraButton}
@@ -139,12 +145,12 @@ export default function ScanScreen() {
               >
                 <Camera size={24} color={Colors.neutral.white} />
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={styles.takePictureButton}
                 onPress={handleTakePicture}
               />
-              
+
               <View style={{ width: 50 }} />
             </View>
           </View>
@@ -160,7 +166,7 @@ export default function ScanScreen() {
         <Text style={styles.subtitle}>
           Take a photo of your ingredients to get recipe suggestions
         </Text>
-        
+
         {!image ? (
           <View style={styles.buttonContainer}>
             <TouchableOpacity
@@ -175,7 +181,7 @@ export default function ScanScreen() {
                 Use camera to capture ingredients
               </Text>
             </TouchableOpacity>
-            
+
             <TouchableOpacity
               style={styles.optionButton}
               onPress={handlePickImage}
@@ -193,14 +199,14 @@ export default function ScanScreen() {
           <View style={styles.resultContainer}>
             <View style={styles.imageContainer}>
               <Image source={{ uri: image }} style={styles.previewImage} />
-              <TouchableOpacity 
-                style={styles.resetButton} 
+              <TouchableOpacity
+                style={styles.resetButton}
                 onPress={handleReset}
               >
                 <X size={20} color={Colors.neutral.white} />
               </TouchableOpacity>
             </View>
-            
+
             {isScanning ? (
               <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color={Colors.primary.default} />
@@ -210,7 +216,7 @@ export default function ScanScreen() {
               <>
                 <View style={styles.ingredientsContainer}>
                   <Text style={styles.ingredientsTitle}>Identified Ingredients</Text>
-                  
+
                   {scannedIngredients.length > 0 ? (
                     scannedIngredients.map((ingredient) => (
                       <View key={ingredient.id} style={styles.ingredientRow}>
@@ -232,7 +238,7 @@ export default function ScanScreen() {
                     </Text>
                   )}
                 </View>
-                
+
                 {scannedIngredients.length > 0 && (
                   <Button
                     title="Find Recipes"
